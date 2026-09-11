@@ -7,7 +7,7 @@
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "migrate": "ts-node src/config/migrate.ts",
+    "migrate": "npm run build && node dist/config/migrate.js",
     "seed": "ts-node src/seeds/seed.ts",
     "lint": "eslint src/**/*.ts"
   },

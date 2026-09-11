@@ -13,6 +13,8 @@ import notificationRoutes from './routes/notification.routes';
 import gamesRoutes from './routes/games.routes';
 import adminWordListRoutes from './routes/admin-wordlist.routes';
 
+import contactRoutes from './routes/contact.routes';
+
 const app = express();
 
 // Security middleware
@@ -41,6 +43,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api', contentRoutes);
 app.use('/api/admin/facebook-sources', adminFacebookRoutes);
 app.use('/api/admin/word-list', adminWordListRoutes);
+app.use('/api', contactRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/facebook', facebookRoutes);
 app.use('/api/notifications', notificationRoutes);
