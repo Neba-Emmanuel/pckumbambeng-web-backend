@@ -1,9 +1,12 @@
+import { createEventSchema } from '../models/schemas';
 import { pool } from '../config/database';
 import { Event } from '../models/types';
 import { PaginatedResult } from './content.service';
 import { ResultSetHeader, RowDataPacket } from 'mysql2';
 
 export interface CreateEventData {
+  detail_page_status?: Event['detail_page_status'];
+  detail_page_path?: string | null;
   title: string;
   event_date: Date | string;
   location: string;
@@ -12,6 +15,8 @@ export interface CreateEventData {
 }
 
 export interface UpdateEventData {
+  detail_page_status?: Event['detail_page_status'];
+  detail_page_path?: string | null;
   title?: string;
   event_date?: Date | string;
   location?: string;
@@ -94,9 +99,9 @@ export class EventService {
    */
   async createEvent(data: CreateEventData): Promise<Event> {
     const [result] = await pool.query<ResultSetHeader>(
-      `INSERT INTO events (title, event_date, location, description, created_by)
-       VALUES (?, ?, ?, ?, ?)`,
-      [data.title, data.event_date, data.location, data.description, data.created_by]
+      `INSERT INTO events (title, event_date, location, description, created_by, detail_page_status, detail_page_path)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [data.title, data.event_date, data.location, data.description, data.created_by, data.detail_page_status ?? 'off', data.detail_page_path ?? null]
     );
 
     const created = await this.getEventById(result.insertId);
@@ -118,9 +123,18 @@ export class EventService {
       return null;
     }
 
+    createEventSchema.parse({ ...existing, ...data, event_date: new Date(data.event_date ?? existing.event_date).toISOString() });
     const fields: string[] = [];
     const values: any[] = [];
 
+    if (data.detail_page_status !== undefined) {
+      fields.push('detail_page_status = ?');
+      values.push(data.detail_page_status);
+    }
+    if (data.detail_page_path !== undefined) {
+      fields.push('detail_page_path = ?');
+      values.push(data.detail_page_path);
+    }
     if (data.title !== undefined) {
       fields.push('title = ?');
       values.push(data.title);

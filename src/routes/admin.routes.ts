@@ -1,3 +1,5 @@
+import { eventService } from '../services/event.service';
+import { pool } from '../config/database';
 import { Router } from 'express';
 import multer from 'multer';
 import path from 'path';
@@ -100,6 +102,25 @@ router.delete('/sermons/:id', adminController.deleteSermon);
 // ─── Event Routes ────────────────────────────────────────────────────────────
 
 // POST /api/admin/events — create event
+router.get('/events', async (_req, res) => {
+  try {
+    const [rows] = await pool.query('SELECT * FROM events ORDER BY event_date DESC');
+    res.json({ success: true, data: rows });
+  } catch {
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Unable to load events' } });
+  }
+});
+router.get('/events/:id', async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isSafeInteger(id) || id < 1) { res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Invalid event ID' } }); return; }
+  try {
+    const event = await eventService.getEventById(id);
+    if (!event) { res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Event not found' } }); return; }
+    res.json({ success: true, data: event });
+  } catch {
+    res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Unable to load event' } });
+  }
+});
 router.post('/events', adminController.createEvent);
 
 // PUT /api/admin/events/:id — update event

@@ -59,6 +59,8 @@ export interface Sermon {
 }
 
 export interface Event {
+  detail_page_status: 'off' | 'not_started' | 'draft' | 'published';
+  detail_page_path: string | null;
   id: number;
   title: string;
   event_date: Date;

@@ -460,6 +460,8 @@ export async function createEvent(req: Request, res: Response): Promise<void> {
     const event = await eventService.createEvent({
       title: parsed.title,
       event_date: parsed.event_date,
+      detail_page_status: parsed.detail_page_status,
+      detail_page_path: parsed.detail_page_path,
       location: parsed.location,
       description: parsed.description,
       created_by: req.member!.id,
