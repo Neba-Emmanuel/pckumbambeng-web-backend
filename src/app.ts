@@ -36,6 +36,11 @@ app.use(cookieParser());
 // Static file serving for uploads
 app.use('/uploads', express.static(path.resolve(env.upload.dir)));
 
+// Root endpoint shared by Vercel and the local server.
+app.get('/', (_req, res) => {
+  res.json({ message: 'Server is running!' });
+});
+
 // Health check endpoint
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

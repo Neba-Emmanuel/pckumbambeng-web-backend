@@ -6,10 +6,6 @@ async function main(): Promise<void> {
   // Test database connection
   await testConnection();
 
-  app.get('/', (req, res) => {
-    res.json({ message: 'Server is running!' });
-  });
-
   // Start Express server
   app.listen(env.port, () => {
     console.log(`[Server] Running on port ${env.port} (${env.nodeEnv})`);
