@@ -203,6 +203,11 @@ export async function streamSermon(req: Request, res: Response): Promise<void> {
       return;
     }
 
+    if (/^https:\/\//.test(sermon.audio_path)) {
+      res.redirect(302, sermon.audio_path);
+      return;
+    }
+
     const filePath = path.resolve(env.upload.dir, sermon.audio_path);
 
     if (!fs.existsSync(filePath)) {

@@ -1,7 +1,11 @@
 import dotenv from 'dotenv';
 import path from 'path';
 
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+if (!process.env.VERCEL) dotenv.config({ path: path.resolve(__dirname, '../../.env'), quiet: true });
+
+if (process.env.VERCEL && (!process.env.JWT_SECRET || process.env.JWT_SECRET.length < 32)) {
+  throw new Error('JWT_SECRET must contain at least 32 characters on Vercel');
+}
 
 export const env = {
   // Server
@@ -15,6 +19,9 @@ export const env = {
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || '',
     name: process.env.DB_NAME || 'pc_kumba_mbeng',
+    connectionLimit: Number(process.env.DB_CONNECTION_LIMIT || (process.env.VERCEL ? 2 : 10)),
+    ssl: process.env.DB_SSL === 'true',
+    sslCa: process.env.DB_SSL_CA?.replace(/\\n/g, '\n'),
   },
 
   // JWT

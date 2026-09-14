@@ -3,3 +3,9 @@ dist/
 .env
 uploads/
 *.log
+
+# Deployment credentials and local environment files
+.vercel/
+.env
+.env.*
+!.env.example

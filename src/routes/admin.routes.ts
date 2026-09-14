@@ -1,3 +1,5 @@
+import { resolveBlobUpload } from './uploads.routes';
+import fs from 'fs';
 import { eventService } from '../services/event.service';
 import { pool } from '../config/database';
 import { Router } from 'express';
@@ -20,6 +22,8 @@ router.use(adminMiddleware);
 // Disk storage for uploads — files are stored in env.upload.dir
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {
+    if (process.env.VERCEL) { cb(new Error('Use direct Blob uploads on Vercel'), ''); return; }
+    fs.mkdirSync(path.resolve(env.upload.dir), { recursive: true });
     cb(null, path.resolve(env.upload.dir));
   },
   filename: (_req, file, cb) => {
@@ -67,6 +71,7 @@ const sermonUpload = multer({
 router.post(
   '/announcements',
   announcementUpload.single('attachment'),
+  resolveBlobUpload('attachment'),
   adminController.createAnnouncement
 );
 
@@ -74,6 +79,7 @@ router.post(
 router.put(
   '/announcements/:id',
   announcementUpload.single('attachment'),
+  resolveBlobUpload('attachment'),
   adminController.updateAnnouncement
 );
 
@@ -86,6 +92,7 @@ router.delete('/announcements/:id', adminController.deleteAnnouncement);
 router.post(
   '/sermons',
   sermonUpload.single('audio'),
+  resolveBlobUpload('audio'),
   adminController.createSermon
 );
 
@@ -93,6 +100,7 @@ router.post(
 router.put(
   '/sermons/:id',
   sermonUpload.single('audio'),
+  resolveBlobUpload('audio'),
   adminController.updateSermon
 );
 

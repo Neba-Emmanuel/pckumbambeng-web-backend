@@ -1,3 +1,4 @@
+import { waitUntil } from '@vercel/functions';
 import webpush from 'web-push';
 import { pool } from '../config/database';
 import { env } from '../config/env';
@@ -26,9 +27,11 @@ export class NotificationService {
     message: string
   ): Promise<void> {
     // Fire-and-forget push to all anonymous subscriptions.
-    this.sendPush(title, message, `/${type}s/${referenceId}`).catch(() => {
+    const delivery = this.sendPush(title, message, `/${type}s/${referenceId}`).catch(() => {
       // Silently ignore push errors — notifications are non-critical.
     });
+    if (process.env.VERCEL) waitUntil(delivery);
+    await delivery;
   }
 
   /**
