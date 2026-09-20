@@ -80,3 +80,21 @@ Public lists and detail URLs hide expired announcements after the selected date
 in Africa/Douala time. Protected admin endpoints include expired records for
 editing or manual deletion. Expiration does not delete records or attachments
 and requires no cron job.
+
+## Reusable preacher profiles
+
+Apply migration `013_preacher_profiles.sql` before deploying the preacher selector.
+It creates the two regular pastor profiles, preserves existing sermon speakers as
+profiles, and links existing sermons by their saved speaker name. Profile names
+and photos are read live by every linked sermon.
+
+Preacher photos always use public Vercel Blob, including local development. Set
+`BLOB_READ_WRITE_TOKEN` and `BLOB_PUBLIC_BASE_URL` on the backend. Run
+`npm run upload:pastor-photos` to import the two existing portraits from
+`../frontend/public`. The script is rerunnable and preserves existing Blob photos.
+
+In the sermon form, enter the preacher’s name and optionally a photo. Saving the
+sermon automatically creates or reuses the preacher profile by name. Names are
+trimmed and repeated whitespace is collapsed; matching is case-insensitive.
+Leaving the photo empty preserves the saved photo. Uploading a replacement
+updates all linked sermons. No separate profile-save step is required.

@@ -17,8 +17,10 @@ export const createAnnouncementSchema = z.object({
 });
 
 export const createSermonSchema = z.object({
+  preacher_id: z.coerce.number().int().positive().optional(),
+  text_content: z.string().max(100000).optional().nullable(),
   title: z.string().min(1),
-  speaker: z.string().min(1),
+  speaker: z.string().trim().min(1).max(100),
   sermon_date: z.string().date(),
   content_type: z.enum(['audio', 'text']),
 });
@@ -46,11 +48,12 @@ export const updateAnnouncementSchema = z.object({
 });
 
 export const updateSermonSchema = z.object({
+  preacher_id: z.coerce.number().int().positive().optional(),
   title: z.string().min(1).optional(),
-  speaker: z.string().min(1).optional(),
+  speaker: z.string().trim().min(1).max(100).optional(),
   sermon_date: z.string().date().optional(),
   content_type: z.enum(['audio', 'text']).optional(),
-  text_content: z.string().optional().nullable(),
+  text_content: z.string().max(100000).optional().nullable(),
 });
 
 export const updateEventSchema = z.object({

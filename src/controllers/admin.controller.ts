@@ -1,3 +1,4 @@
+import { preacherService } from '../services/preacher.service';
 import { Request, Response } from 'express';
 import { ZodError } from 'zod';
 import { contentService, validateAttachment } from '../services/content.service';
@@ -241,6 +242,8 @@ export async function createSermon(req: Request, res: Response): Promise<void> {
     const body = { ...req.body };
 
     const parsed = createSermonSchema.parse(body);
+    let preacher = parsed.preacher_id ? await preacherService.get(parsed.preacher_id) : null;
+    if (parsed.preacher_id && !preacher) { res.status(400).json({ success: false, error: { message: 'Select an existing preacher.' } }); return; }
 
     let audio_path: string | null = null;
 
@@ -250,12 +253,18 @@ export async function createSermon(req: Request, res: Response): Promise<void> {
       audio_path = req.file.filename;
     }
 
+    if ((parsed.content_type === 'text' && !parsed.text_content?.trim()) || (parsed.content_type === 'audio' && !audio_path)) {
+      res.status(400).json({ success: false, error: { message: 'Provide sermon text or the selected audio recording.' } }); return;
+    }
+    if (!preacher) preacher = await preacherService.remember(parsed.speaker, res.locals.preacherImage);
     const sermon = await sermonService.createSermon({
       title: parsed.title,
-      speaker: parsed.speaker,
+      speaker: preacher?.name || parsed.speaker,
+      preacher_id: preacher?.id,
       sermon_date: parsed.sermon_date,
       content_type: parsed.content_type,
-      text_content: (body.text_content as string) || null,
+      text_content: parsed.text_content || null,
+      preacher_image: preacher ? null : res.locals.preacherImage || null,
       audio_path,
       created_by: req.member!.id,
     });
@@ -346,6 +355,25 @@ export async function updateSermon(req: Request, res: Response): Promise<void> {
       updateData.audio_path = audio_path;
     }
 
+    if (res.locals.preacherImage) updateData.preacher_image = res.locals.preacherImage;
+    else if (body.remove_preacher_image === 'true') updateData.preacher_image = null;
+    const preacher = parsed.preacher_id ? await preacherService.get(parsed.preacher_id) : null;
+    if (parsed.preacher_id && !preacher) { res.status(400).json({ success: false, error: { message: 'Select an existing preacher.' } }); return; }
+    if (preacher) { updateData.speaker = preacher.name; delete updateData.preacher_image; }
+    const existing = await sermonService.getSermonById(id);
+    if (existing?.preacher_id) delete updateData.preacher_image;
+    if (existing) {
+      const merged = { ...existing, ...updateData };
+      if ((merged.content_type === 'text' && !merged.text_content?.trim()) || (merged.content_type === 'audio' && !merged.audio_path)) {
+        res.status(400).json({ success: false, error: { message: 'Provide sermon text or the selected audio recording.' } }); return;
+      }
+    }
+    if (existing && !parsed.preacher_id && (parsed.speaker !== undefined || res.locals.preacherImage)) {
+      const remembered = await preacherService.remember(parsed.speaker ?? existing.speaker, res.locals.preacherImage);
+      updateData.preacher_id = remembered.id;
+      updateData.speaker = remembered.name;
+      delete updateData.preacher_image;
+    }
     const sermon = await sermonService.updateSermon(id, updateData);
 
     if (!sermon) {

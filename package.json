@@ -9,7 +9,8 @@
     "start": "node dist/server.js",
     "migrate": "npm run build && node dist/config/migrate.js",
     "seed": "ts-node src/seeds/seed.ts",
-    "lint": "eslint src/**/*.ts"
+    "lint": "eslint src/**/*.ts",
+    "upload:pastor-photos": "npm run build && node dist/scripts/upload-pastor-photos.js"
   },
   "keywords": [],
   "author": "",

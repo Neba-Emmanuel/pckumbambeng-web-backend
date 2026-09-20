@@ -1,4 +1,5 @@
 import uploadsRoutes from './routes/uploads.routes';
+import preachersRoutes from './routes/preachers.routes';
 import { facebookService } from './services/facebook.service';
 import express from 'express';
 import cors from 'cors';
@@ -65,6 +66,7 @@ app.use('/api', contentRoutes);
 app.use('/api/admin/facebook-sources', adminFacebookRoutes);
 app.use('/api/admin/word-list', adminWordListRoutes);
 app.use('/api', contactRoutes);
+app.use('/api/admin/preachers', preachersRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/facebook', facebookRoutes);
 app.use('/api/notifications', notificationRoutes);
