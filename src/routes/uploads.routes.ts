@@ -6,6 +6,7 @@ import { env } from '../config/env';
 
 const router = Router();
 const audioTypes = ['audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/wave', 'audio/x-wav'];
+const portraitTypes = ['image/png', 'image/jpeg', 'image/webp'];
 const attachmentTypes = ['application/pdf', 'image/png', 'image/jpeg'];
 
 router.post('/blob', async (req, res) => {
@@ -20,10 +21,10 @@ router.post('/blob', async (req, res) => {
       onBeforeGenerateToken: async pathname => {
         const user = jwt.verify(req.cookies?.token || '', env.jwt.secret) as jwt.JwtPayload;
         if (user.role !== 'administrator') throw new Error('Administrator access required');
-        if (!/^(sermons|announcements)\/[a-f0-9-]{36}\.[a-z0-9]+$/.test(pathname)) throw new Error('Invalid upload path');
+        if (!/^(sermons|announcements|preachers)\/[a-f0-9-]{36}\.[a-z0-9]+$/.test(pathname)) throw new Error('Invalid upload path');
         const audio = pathname.startsWith('sermons/');
         return {
-          allowedContentTypes: audio ? audioTypes : attachmentTypes,
+          allowedContentTypes: audio ? audioTypes : pathname.startsWith('preachers/') ? portraitTypes : attachmentTypes,
           maximumSizeInBytes: (audio ? env.upload.maxAudioSizeMB : env.upload.maxAttachmentSizeMB) * 1024 * 1024,
           addRandomSuffix: true,
         };
@@ -39,20 +40,21 @@ router.post('/blob', async (req, res) => {
 
 // Run only after admin authentication. Verify saved URLs against this store
 // and check actual object metadata rather than trusting browser MIME/size.
-export function resolveBlobUpload(field: 'audio' | 'attachment'): RequestHandler {
+export function resolveBlobUpload(field: 'audio' | 'attachment' | 'preacher_image'): RequestHandler {
   return async (req, res, next) => {
     const value = req.body?.[`${field}_url`];
     if (value === undefined) { next(); return; }
     try {
       const base = new URL(process.env.BLOB_PUBLIC_BASE_URL || '');
       const url = new URL(value);
-      const prefix = field === 'audio' ? '/sermons/' : '/announcements/';
+      const prefix = field === 'audio' ? '/sermons/' : field === 'preacher_image' ? '/preachers/' : '/announcements/';
       if (url.protocol !== 'https:' || url.origin !== base.origin || url.username || url.password || url.search || url.hash || !url.pathname.startsWith(prefix)) throw new Error('Invalid file URL');
       const metadata = await head(url.href);
-      const allowed = field === 'audio' ? audioTypes : attachmentTypes;
+      const allowed = field === 'audio' ? audioTypes : field === 'preacher_image' ? portraitTypes : attachmentTypes;
       const max = (field === 'audio' ? env.upload.maxAudioSizeMB : env.upload.maxAttachmentSizeMB) * 1024 * 1024;
       if (!allowed.includes(metadata.contentType) || metadata.size > max) throw new Error('Invalid file');
       // Existing controllers persist filename and validate mimetype/size.
+      if (field === 'preacher_image') { res.locals.preacherImage = url.href; next(); return; }
       req.file = { filename: url.href, mimetype: metadata.contentType === 'audio/mp3' ? 'audio/mpeg' : metadata.contentType, size: metadata.size } as Express.Multer.File;
       next();
     } catch {

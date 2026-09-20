@@ -47,6 +47,8 @@ export interface Announcement {
 }
 
 export interface Sermon {
+  preacher_id: number | null;
+  preacher_image: string | null;
   id: number;
   title: string;
   speaker: string;

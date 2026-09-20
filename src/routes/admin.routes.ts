@@ -57,7 +57,7 @@ const sermonUpload = multer({
     fileSize: env.upload.maxAudioSizeMB * 1024 * 1024,
   },
   fileFilter: (_req, file, cb) => {
-    const allowedMimes = ['audio/mpeg', 'audio/wav', 'audio/wave', 'audio/x-wav'];
+    const allowedMimes = file.fieldname === 'preacher_image' ? ['image/png', 'image/jpeg', 'image/webp'] : ['audio/mpeg', 'audio/wav', 'audio/wave', 'audio/x-wav'];
     if (allowedMimes.includes(file.mimetype)) {
       cb(null, true);
     } else {
@@ -96,16 +96,40 @@ router.delete('/announcements/:id', adminController.deleteAnnouncement);
 // POST /api/admin/sermons — create sermon with optional audio upload
 router.post(
   '/sermons',
-  sermonUpload.single('audio'),
+  sermonUpload.fields([{ name: 'audio', maxCount: 1 }, { name: 'preacher_image', maxCount: 1 }]),
+  (req, res, next) => {
+    const files = req.files as Record<string, Express.Multer.File[]> | undefined;
+    const portrait = files?.preacher_image?.[0];
+    if (portrait && portrait.size > env.upload.maxAttachmentSizeMB * 1024 * 1024) {
+      fs.unlink(portrait.path, () => {});
+      res.status(400).json({ success: false, error: { message: 'Preacher photo must be 10 MB or smaller.' } }); return;
+    }
+    if (portrait) res.locals.preacherImage = portrait.filename;
+    req.file = files?.audio?.[0];
+    next();
+  },
   resolveBlobUpload('audio'),
+  resolveBlobUpload('preacher_image'),
   adminController.createSermon
 );
 
 // PUT /api/admin/sermons/:id — update sermon
 router.put(
   '/sermons/:id',
-  sermonUpload.single('audio'),
+  sermonUpload.fields([{ name: 'audio', maxCount: 1 }, { name: 'preacher_image', maxCount: 1 }]),
+  (req, res, next) => {
+    const files = req.files as Record<string, Express.Multer.File[]> | undefined;
+    const portrait = files?.preacher_image?.[0];
+    if (portrait && portrait.size > env.upload.maxAttachmentSizeMB * 1024 * 1024) {
+      fs.unlink(portrait.path, () => {});
+      res.status(400).json({ success: false, error: { message: 'Preacher photo must be 10 MB or smaller.' } }); return;
+    }
+    if (portrait) res.locals.preacherImage = portrait.filename;
+    req.file = files?.audio?.[0];
+    next();
+  },
   resolveBlobUpload('audio'),
+  resolveBlobUpload('preacher_image'),
   adminController.updateSermon
 );
 

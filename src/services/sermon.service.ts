@@ -15,6 +15,8 @@ const ALLOWED_AUDIO_TYPES: Record<string, string> = {
 const MAX_AUDIO_SIZE_BYTES = env.upload.maxAudioSizeMB * 1024 * 1024;
 
 export interface CreateSermonData {
+  preacher_id?: number;
+  preacher_image?: string | null;
   title: string;
   speaker: string;
   sermon_date: string;
@@ -25,6 +27,8 @@ export interface CreateSermonData {
 }
 
 export interface UpdateSermonData {
+  preacher_id?: number;
+  preacher_image?: string | null;
   title?: string;
   speaker?: string;
   sermon_date?: string;
@@ -60,6 +64,10 @@ export function validateAudioFile(mimeType: string, sizeBytes: number): string {
   return typeLabel;
 }
 
+const sermonSelect = `SELECT s.*, CASE WHEN p.id IS NOT NULL THEN p.name ELSE s.speaker END AS speaker,
+  CASE WHEN p.id IS NOT NULL THEN p.image_url ELSE s.preacher_image END AS preacher_image
+  FROM sermons s LEFT JOIN preachers p ON p.id = s.preacher_id`;
+
 export class SermonService {
   /**
    * List sermons with pagination, ordered by sermon_date DESC.
@@ -80,7 +88,7 @@ export class SermonService {
 
     // Get paginated items ordered by sermon_date DESC
     const [rows] = await pool.query<RowDataPacket[]>(
-      'SELECT * FROM sermons ORDER BY sermon_date DESC LIMIT ? OFFSET ?',
+      `${sermonSelect} ORDER BY s.sermon_date DESC, s.id DESC LIMIT ? OFFSET ?`,
       [safePageSize, offset]
     );
 
@@ -99,7 +107,7 @@ export class SermonService {
    */
   async getSermonById(id: number): Promise<Sermon | null> {
     const [rows] = await pool.query<RowDataPacket[]>(
-      'SELECT * FROM sermons WHERE id = ?',
+      `${sermonSelect} WHERE s.id = ?`,
       [id]
     );
 
@@ -116,8 +124,8 @@ export class SermonService {
    */
   async createSermon(data: CreateSermonData): Promise<Sermon> {
     const [result] = await pool.query<ResultSetHeader>(
-      `INSERT INTO sermons (title, speaker, sermon_date, content_type, text_content, audio_path, created_by, published_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
+      `INSERT INTO sermons (title, speaker, sermon_date, content_type, text_content, audio_path, preacher_image, preacher_id, created_by, published_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())`,
       [
         data.title,
         data.speaker,
@@ -125,12 +133,14 @@ export class SermonService {
         data.content_type,
         data.text_content || null,
         data.audio_path || null,
+        data.preacher_image || null,
+        data.preacher_id ?? null,
         data.created_by,
       ]
     );
 
     const [rows] = await pool.query<RowDataPacket[]>(
-      'SELECT * FROM sermons WHERE id = ?',
+      `${sermonSelect} WHERE s.id = ?`,
       [result.insertId]
     );
 
@@ -149,7 +159,7 @@ export class SermonService {
   async updateSermon(id: number, data: UpdateSermonData): Promise<Sermon | null> {
     // Check if sermon exists
     const [existingRows] = await pool.query<RowDataPacket[]>(
-      'SELECT * FROM sermons WHERE id = ?',
+      `${sermonSelect} WHERE s.id = ?`,
       [id]
     );
 
@@ -160,6 +170,9 @@ export class SermonService {
     // Build dynamic UPDATE query with only provided fields
     const fields: string[] = [];
     const values: any[] = [];
+
+    if (data.preacher_id !== undefined) { fields.push('preacher_id = ?'); values.push(data.preacher_id); }
+    if (data.preacher_image !== undefined) { fields.push('preacher_image = ?'); values.push(data.preacher_image); }
 
     if (data.title !== undefined) {
       fields.push('title = ?');
@@ -205,7 +218,7 @@ export class SermonService {
     );
 
     const [rows] = await pool.query<RowDataPacket[]>(
-      'SELECT * FROM sermons WHERE id = ?',
+      `${sermonSelect} WHERE s.id = ?`,
       [id]
     );
 
