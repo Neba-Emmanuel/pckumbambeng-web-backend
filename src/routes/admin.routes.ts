@@ -10,6 +10,7 @@ import { authMiddleware } from '../middleware/auth.middleware';
 import { adminMiddleware } from '../middleware/admin.middleware';
 import { env } from '../config/env';
 import * as adminController from '../controllers/admin.controller';
+import { listAnnouncements, getAnnouncement } from '../controllers/content.controller';
 
 const router = Router();
 
@@ -66,6 +67,10 @@ const sermonUpload = multer({
 });
 
 // ─── Announcement Routes ─────────────────────────────────────────────────────
+
+// Authenticated administrators can still read and edit expired announcements.
+router.get('/announcements', (_req, res, next) => { res.locals.includeExpired = true; next(); }, listAnnouncements);
+router.get('/announcements/:id', (_req, res, next) => { res.locals.includeExpired = true; next(); }, getAnnouncement);
 
 // POST /api/admin/announcements — create announcement with optional attachment
 router.post(

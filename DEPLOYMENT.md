@@ -70,3 +70,13 @@ limits, configure platform firewall rules or a shared rate-limit store.
 
 Local validation: `npm run build` and `node --test tests/*.test.cjs`.
 The Blob integration requires a connected store for a real end-to-end upload test.
+
+## Announcement expiry
+
+Apply migration `011_announcement_expiry.sql` with `npm run migrate` before
+releasing the announcement expiry code. The nullable `expires_on` column keeps
+existing announcements visible until an administrator assigns a Show until date.
+Public lists and detail URLs hide expired announcements after the selected date
+in Africa/Douala time. Protected admin endpoints include expired records for
+editing or manual deletion. Expiration does not delete records or attachments
+and requires no cron job.

@@ -20,6 +20,7 @@ export interface PaginatedResult<T> {
 }
 
 export interface CreateAnnouncementData {
+  expires_on?: string | null;
   title: string;
   body: string;
   attachment_path?: string | null;
@@ -28,6 +29,7 @@ export interface CreateAnnouncementData {
 }
 
 export interface UpdateAnnouncementData {
+  expires_on?: string | null;
   title?: string;
   body?: string;
   attachment_path?: string | null;
@@ -61,29 +63,39 @@ export function validateAttachment(mimeType: string, sizeBytes: number): string 
   return typeLabel;
 }
 
+export function announcementToday(now = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Douala', year: 'numeric', month: '2-digit', day: '2-digit' }).format(now);
+}
+
+const announcementColumns = "announcements.*, DATE_FORMAT(expires_on, '%Y-%m-%d') AS expires_on";
+
 export class ContentService {
   /**
    * List announcements with pagination, ordered by published_at DESC.
    */
   async listAnnouncements(
     page: number,
-    pageSize: number = 20
+    pageSize: number = 20,
+    includeExpired: boolean = false
   ): Promise<PaginatedResult<Announcement>> {
     // Ensure page and pageSize are valid
     const safePage = Math.max(1, page);
     const safePageSize = Math.max(1, Math.min(100, pageSize));
     const offset = (safePage - 1) * safePageSize;
 
+    const where = includeExpired ? '' : ' WHERE (expires_on IS NULL OR expires_on >= ?)';
+    const params = includeExpired ? [] : [announcementToday()];
+
     // Get total count
     const [countRows] = await pool.query<RowDataPacket[]>(
-      'SELECT COUNT(*) as total FROM announcements'
+      `SELECT COUNT(*) as total FROM announcements${where}`, params
     );
     const total = countRows[0].total as number;
 
     // Get paginated items
     const [rows] = await pool.query<RowDataPacket[]>(
-      'SELECT * FROM announcements ORDER BY published_at DESC LIMIT ? OFFSET ?',
-      [safePageSize, offset]
+      `SELECT ${announcementColumns} FROM announcements${where} ORDER BY published_at DESC, id DESC LIMIT ? OFFSET ?`,
+      [...params, safePageSize, offset]
     );
 
     return {
@@ -98,10 +110,10 @@ export class ContentService {
    * Get a single announcement by ID.
    * Returns the announcement or null if not found.
    */
-  async getAnnouncementById(id: number): Promise<Announcement | null> {
+  async getAnnouncementById(id: number, includeExpired = true): Promise<Announcement | null> {
     const [rows] = await pool.query<RowDataPacket[]>(
-      'SELECT * FROM announcements WHERE id = ?',
-      [id]
+      `SELECT ${announcementColumns} FROM announcements WHERE id = ?${includeExpired ? '' : ' AND (expires_on IS NULL OR expires_on >= ?)'}`,
+      includeExpired ? [id] : [id, announcementToday()]
     );
 
     if (rows.length === 0) {
@@ -117,13 +129,14 @@ export class ContentService {
    */
   async createAnnouncement(data: CreateAnnouncementData): Promise<Announcement> {
     const [result] = await pool.query<ResultSetHeader>(
-      `INSERT INTO announcements (title, body, attachment_path, attachment_type, published_at, created_by, updated_at)
-       VALUES (?, ?, ?, ?, NOW(), ?, NOW())`,
+      `INSERT INTO announcements (title, body, attachment_path, attachment_type, expires_on, published_at, created_by, updated_at)
+       VALUES (?, ?, ?, ?, ?, NOW(), ?, NOW())`,
       [
         data.title,
         data.body,
         data.attachment_path || null,
         data.attachment_type || null,
+        data.expires_on ?? null,
         data.created_by,
       ]
     );
@@ -154,6 +167,11 @@ export class ContentService {
     // Build dynamic UPDATE query with only provided fields
     const fields: string[] = [];
     const values: any[] = [];
+
+    if (data.expires_on !== undefined) {
+      fields.push('expires_on = ?');
+      values.push(data.expires_on);
+    }
 
     if (data.title !== undefined) {
       fields.push('title = ?');

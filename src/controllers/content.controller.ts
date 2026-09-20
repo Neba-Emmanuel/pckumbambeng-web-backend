@@ -17,7 +17,7 @@ import { env } from '../config/env';
 export async function listAnnouncements(req: Request, res: Response): Promise<void> {
   try {
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
-    const result = await contentService.listAnnouncements(page);
+    const result = await contentService.listAnnouncements(page, 20, res.locals.includeExpired === true);
 
     res.status(200).json({
       success: true,
@@ -57,7 +57,7 @@ export async function getAnnouncement(req: Request, res: Response): Promise<void
       return;
     }
 
-    const announcement = await contentService.getAnnouncementById(id);
+    const announcement = await contentService.getAnnouncementById(id, res.locals.includeExpired === true);
     if (!announcement) {
       res.status(404).json({
         success: false,

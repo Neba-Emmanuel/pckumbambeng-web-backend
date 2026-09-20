@@ -36,6 +36,7 @@ export async function createAnnouncement(req: Request, res: Response): Promise<v
     const announcement = await contentService.createAnnouncement({
       title: parsed.title,
       body: parsed.body,
+      expires_on: parsed.expires_on,
       attachment_path,
       attachment_type,
       created_by: req.member!.id,

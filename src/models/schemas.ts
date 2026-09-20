@@ -8,8 +8,10 @@ export const loginSchema = z.object({
 });
 
 // Content schemas
+const announcementExpiry = z.preprocess(value => value === '' ? null : value, z.string().date().nullable().optional());
 
 export const createAnnouncementSchema = z.object({
+  expires_on: announcementExpiry,
   title: z.string().min(1).max(200),
   body: z.string().min(1),
 });
@@ -38,6 +40,7 @@ export const createEventSchema = z.object({
 // Update schemas (partial versions for PUT operations)
 
 export const updateAnnouncementSchema = z.object({
+  expires_on: announcementExpiry,
   title: z.string().min(1).max(200).optional(),
   body: z.string().min(1).optional(),
 });

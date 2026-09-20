@@ -35,6 +35,7 @@ export interface Admin {
 }
 
 export interface Announcement {
+  expires_on: string | null;
   id: number;
   title: string;
   body: string;
