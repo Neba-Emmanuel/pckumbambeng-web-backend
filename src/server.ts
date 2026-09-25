@@ -3,11 +3,15 @@ import { env, testConnection } from './config';
 import { startFacebookPolling } from './cron/facebook-poll';
 
 async function main(): Promise<void> {
+  // Test database connection
   await testConnection();
-  if (process.env.VERCEL) return;
+
+  // Start Express server
   app.listen(env.port, () => {
     console.log(`[Server] Running on port ${env.port} (${env.nodeEnv})`);
   });
+
+  // Start background cron jobs
   startFacebookPolling();
 }
 
