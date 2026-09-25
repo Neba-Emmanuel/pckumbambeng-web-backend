@@ -1,5 +1,13 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "npm run build",
-  "installCommand": "npm ci"
+  "installCommand": "npm ci",
+  "env": {
+    "BLOB_PUBLIC_BASE_URL": "https://eupt3sklzbxi0t8e.public.blob.vercel-storage.com"
+  },
+  "functions": {
+    "api.js": {
+      "runtime": "nodejs24.x"
+    }
+  }
 }
